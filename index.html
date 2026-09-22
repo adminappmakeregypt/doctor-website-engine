@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>موقع الطبيب</title>
+<meta name="description" content="موقع طبي احترافي — بيانات الطبيب والخدمات ومواعيد العمل والحجز." />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="favicon.ico" type="image/x-icon" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css?v=6" />
+</head>
+<body>
+
+<!-- states -->
+<div class="state" id="stLoading">
+  <div class="state-box">
+    <div class="spinner"></div>
+    <p>جارٍ تحميل الموقع…</p>
+  </div>
+</div>
+
+<div class="state hidden" id="stNotFound">
+  <div class="state-box">
+    <div class="state-ico">🔎</div>
+    <h1>الموقع غير موجود</h1>
+    <p>لا يوجد موقع مرتبط بهذا العنوان. تأكد من الرابط أو تواصل مع العيادة.</p>
+  </div>
+</div>
+
+<div class="state hidden" id="stDisabled">
+  <div class="state-box">
+    <div class="state-ico">⏸️</div>
+    <h1>الموقع غير متاح حالياً</h1>
+    <p>هذا الموقع متوقف مؤقتاً. برجاء المحاولة لاحقاً.</p>
+  </div>
+</div>
+
+<div class="state hidden" id="stEmpty">
+  <div class="state-box dir-box">
+    <div class="state-ico">🩺</div>
+    <h1>لا يوجد أي طبيب مُسجَّل بعد</h1>
+    <p>لم يتم إضافة أي موقع طبيب حتى الآن. افتح لوحة المدير وأضف أول طبيب، وسيظهر اسمه هنا مباشرة.</p>
+    <p class="muted" id="emptyHint"></p>
+    <div class="dir-links">
+      <a class="btn" href="admin.html">لوحة المدير — إضافة طبيب</a>
+      <a class="btn btn-ghost" href="seed-demo.html">إنشاء بيانات تجريبية</a>
+      <a class="btn btn-ghost" href="doctor.html">لوحة الطبيب</a>
+    </div>
+  </div>
+</div>
+
+<div class="state hidden" id="stDirectory">
+  <div class="state-box dir-box">
+    <div class="state-ico">🩺</div>
+    <h1>مواقع الأطباء</h1>
+    <p>اختر الطبيب لفتح موقعه.</p>
+    <div id="dirList" class="dir-list"></div>
+    <div class="dir-links">
+      <a class="btn btn-ghost" href="doctor.html">لوحة الطبيب</a>
+      <a class="btn btn-ghost" href="admin.html">لوحة المدير</a>
+    </div>
+  </div>
+</div>
+
+<!-- website -->
+<div id="site" class="hidden">
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span id="brandLogo"></span>
+        <div class="brand-text">
+          <strong id="brandName">—</strong>
+          <span id="brandSpec"></span>
+        </div>
+      </div>
+      <button class="menu-btn" id="menuBtn" aria-label="القائمة">☰</button>
+      <nav class="nav" id="nav">
+        <a href="#about" data-sec="about">عن الطبيب</a>
+        <a href="#services" data-sec="services">الخدمات</a>
+        <a href="#hours" data-sec="hours">مواعيد العمل</a>
+        <a href="#contact" data-sec="contact">العنوان والتواصل</a>
+        <a href="#book" data-sec="book">احجز موعد</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-cover" id="heroCover"></div>
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <h1 id="hDoctor">—</h1>
+        <p class="title" id="hTitle"></p>
+        <p class="spec" id="hSpec"></p>
+        <p class="intro" id="hIntro"></p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#book"><span>احجز موعد</span><span class="btn-arrow" aria-hidden="true">←</span></a>
+          <a class="btn btn-wa hidden" id="hWa" target="_blank" rel="noopener"><span class="btn-icon" aria-hidden="true">◉</span> واتساب</a>
+          <a class="btn btn-ghost hidden" id="hPhone"><span class="btn-icon" aria-hidden="true">☎</span> اتصل الآن</a>
+        </div>
+      </div>
+      <img class="hero-photo hidden" id="hPhoto" alt="" />
+      <img class="clinic-art" src="clinic-building.png" alt="مجسم العيادة" />
+    </div>
+  </section>
+
+  <section class="section hidden" id="about">
+    <div class="container">
+      <h2>عن الطبيب</h2>
+      <p class="sub" id="aboutName"></p>
+      <div class="grid grid-3" id="aboutGrid"></div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="services">
+    <div class="container">
+      <h2>الخدمات</h2>
+      <p class="sub">الخدمات المتاحة في العيادة</p>
+      <div class="grid grid-3" id="servicesGrid"></div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="hours">
+    <div class="container">
+      <h2>مواعيد العمل</h2>
+      <p class="sub">أوقات استقبال الحالات</p>
+      <div class="card"><table class="hours"><tbody id="hoursBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="section hidden" id="contact">
+    <div class="container">
+      <h2>العنوان والتواصل</h2>
+      <p class="sub">كيف تصل إلينا</p>
+      <div class="grid grid-2">
+        <div class="card" id="contactCard"></div>
+        <div class="card hidden" id="socialCard">
+          <p class="info-title">تابعنا</p>
+          <div class="social" id="socialList"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="book">
+    <div class="container">
+      <h2>احجز موعدك الآن</h2>
+      <p>اختر الوقت المناسب لك وسنستقبلك في العيادة.</p>
+      <div class="hero-actions" style="justify-content:center">
+        <a class="btn btn-primary" id="bookBtn" href="#book"><span>احجز موعد</span><span class="btn-arrow" aria-hidden="true">←</span></a>
+        <a class="btn btn-wa hidden" id="bookWa" target="_blank" rel="noopener"><span class="btn-icon" aria-hidden="true">◉</span> احجز عبر واتساب</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <strong id="fName">—</strong>
+          <div id="fAddress" style="font-size:14px"></div>
+        </div>
+        <div id="fContact" style="font-size:14px"></div>
+        <div class="social" id="fSocial"></div>
+      </div>
+      <div class="copy">© <span id="fYear"></span> — جميع الحقوق محفوظة</div>
+    </div>
+  </footer>
+
+  <a class="fab hidden" id="fabWa" target="_blank" rel="noopener" aria-label="واتساب">💬</a>
+</div>
+
+<script type="module" src="site.js?v=3"></script>
+</body>
+</html>
