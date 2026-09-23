@@ -1,0 +1,43 @@
+// ===== Doctor Website Engine — Firestore rules (أضِفها داخل match /databases/{database}/documents) =====
+// ملاحظة: لا تحذف قواعد تطبيق العيادة الموجودة (patients, patientRecords, ...). أضف هذه بجانبها فقط.
+
+function isSignedIn() { return request.auth != null; }
+function isSuperAdmin() {
+  return isSignedIn() && request.auth.token.email != null &&
+         request.auth.token.email.lower() in ["mostafa.hegab83@gmail.com"];
+}
+function userDoc() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+function hasUserDoc() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+function isAdmin() {
+  return isSuperAdmin() ||
+    (hasUserDoc() && userDoc().role in ["superadmin", "super_admin", "admin", "owner"]);
+}
+function ownsClinic(clinicId) {
+  return hasUserDoc() && userDoc().clinicId == clinicId && userDoc().isActive != false;
+}
+
+// المستخدمون: المستخدم يقرأ نفسه، والمدير يقرأ ويكتب الجميع.
+// المستخدم لا يستطيع تغيير دوره أو عيادته أو حالة تفعيله بنفسه.
+match /users/{uid} {
+  allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+  allow create, delete: if isAdmin();
+  allow update: if isAdmin() ||
+    (request.auth.uid == uid &&
+     !request.resource.data.diff(resource.data).affectedKeys().hasAny(["role", "clinicId", "isActive"]));
+}
+
+// فهرس الروابط: قراءة عامة، والكتابة للمدير فقط.
+match /websiteDirectory/{slug} {
+  allow read: if true;
+  allow write: if isAdmin();
+}
+
+// إعدادات الموقع والخدمات: قراءة عامة، والكتابة للمدير أو طبيب العيادة المفعّل.
+match /clinics/{clinicId}/websiteSettings/{docId} {
+  allow read: if true;
+  allow write: if isAdmin() || ownsClinic(clinicId);
+}
+match /clinics/{clinicId}/services/{serviceId} {
+  allow read: if true;
+  allow write: if isAdmin() || ownsClinic(clinicId);
+}

@@ -1,0 +1,11 @@
+// ===== Doctor Website Engine — Storage rules (Firebase Console ← Storage ← Rules) =====
+// أضف هذا الجزء داخل match /b/{bucket}/o بجانب قواعد مرفقات العيادة الحالية.
+match /clinics/{clinicId}/attachments/website/{allPaths=**} {
+  allow read: if true;
+  allow write: if request.auth != null &&
+    request.resource.size < 5 * 1024 * 1024 &&
+    request.resource.contentType.matches('image/.*') &&
+    (request.auth.token.email.lower() in ["mostafa.hegab83@gmail.com"] ||
+     firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.clinicId == clinicId ||
+     firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ["superadmin", "super_admin", "admin", "owner"]);
+}
