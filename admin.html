@@ -69,6 +69,10 @@
         <div><label class="f" for="nWa">واتساب (بكود الدولة)</label><input id="nWa" type="tel" placeholder="201000000000" /></div>
         <div><label class="f" for="nEmail">بريد دخول الطبيب</label><input id="nEmail" type="email" placeholder="doctor@example.com" /></div>
         <div><label class="f" for="nPass">كلمة المرور (٦ أحرف على الأقل)</label><input id="nPass" type="password" placeholder="••••••••" /></div>
+        <div><label class="f" for="nAddress">موقع / عنوان العيادة</label><input id="nAddress" type="text" placeholder="القاهرة، مصر" /></div>
+        <div><label class="f" for="nMaps">رابط الموقع على خرائط جوجل</label><input id="nMaps" type="url" placeholder="https://maps.google.com/..." /></div>
+        <div><label class="f" for="nFacebook">رابط صفحة فيسبوك</label><input id="nFacebook" type="url" placeholder="https://facebook.com/..." /></div>
+        <div><label class="f" for="nInstagram">رابط صفحة إنستجرام</label><input id="nInstagram" type="url" placeholder="https://instagram.com/..." /></div>
       </div>
 
       <div class="grid2 imgs" style="margin-top:12px">
@@ -145,7 +149,12 @@
         <select id="edEnabled"><option value="1">مُفعّل</option><option value="0">متوقف</option></select>
       </div>
     </div>
-    <div style="margin-top:10px"><label class="f" for="edAddress">العنوان</label><input id="edAddress" type="text" /></div>
+    <div class="grid2" style="margin-top:10px">
+      <div><label class="f" for="edAddress">موقع / عنوان العيادة</label><input id="edAddress" type="text" /></div>
+      <div><label class="f" for="edMaps">رابط الموقع على خرائط جوجل</label><input id="edMaps" type="url" /></div>
+      <div><label class="f" for="edFacebook">رابط صفحة فيسبوك</label><input id="edFacebook" type="url" /></div>
+      <div><label class="f" for="edInstagram">رابط صفحة إنستجرام</label><input id="edInstagram" type="url" /></div>
+    </div>
     <div class="grid2 imgs" style="margin-top:12px">
       <div>
         <label class="f">لوجو العيادة</label>
@@ -172,6 +181,6 @@
   </div>
 </div>
 
-<script type="module" src="admin.js?v=3"></script>
+<script type="module" src="admin.js?v=4"></script>
 </body>
 </html>
