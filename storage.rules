@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// ===== Storage rules v21 (Firebase Console → Storage → Rules) =====
+// Uses the same trusted clinic relationship as firestore.rules.
+// The first Publish asks to allow Storage to read Firestore — accept it.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function email() {
+      return request.auth != null && request.auth.token.email != null ? request.auth.token.email.lower() : "";
+    }
+    function userPath() { return /databases/(default)/documents/users/$(request.auth.uid); }
+    function memberPath() { return /databases/(default)/documents/clinicMembers/$(email()); }
+    function isGlobalAdmin() {
+      return email() in ["mostafa.hegab83@gmail.com"] ||
+        (request.auth != null && firestore.exists(userPath()) &&
+         firestore.get(userPath()).data.get("role", "") in ["superadmin", "super_admin"]);
+    }
+    function memberOf(clinicId) {
+      return request.auth != null && (
+        (firestore.exists(userPath()) &&
+          firestore.get(userPath()).data.get("clinicId", "") == clinicId &&
+          firestore.get(userPath()).data.get("isActive", true) != false) ||
+        (email() != "" && firestore.exists(memberPath()) &&
+          firestore.get(memberPath()).data.get("clinicId", "") == clinicId &&
+          firestore.get(memberPath()).data.get("isActive", true) != false)
+      );
+    }
+
+    // Clinic attachments (patient files) — only that clinic's accounts or the platform admin.
+    match /clinics/{clinicId}/attachments/{allPaths=**} {
+      allow read, write: if isGlobalAdmin() || memberOf(clinicId);
+    }
+
+    // Public website images — anyone can view; images < 5MB, written by that clinic's accounts or the admin.
+    match /clinics/{clinicId}/attachments/website/{allPaths=**} {
+      allow read: if true;
+      allow write: if (isGlobalAdmin() || memberOf(clinicId)) &&
+        request.resource != null &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+  }
+}
