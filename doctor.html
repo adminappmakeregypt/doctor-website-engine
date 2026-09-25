@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لوحة الطبيب — تعديل موقعي</title>
+<meta name="description" content="لوحة الطبيب لتعديل بيانات الموقع: النبذة، الخدمات، مواعيد العمل، الصور وبيانات التواصل." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="admin.css?v=2" />
+<link rel="stylesheet" href="doctor.css?v=1" />
+</head>
+<body>
+
+<!-- ============ تسجيل الدخول ============ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-ico">🩺</div>
+    <h1>لوحة الطبيب</h1>
+    <p class="sub">سجّل الدخول لتعديل بيانات موقعك.</p>
+    <div style="display:grid;gap:10px">
+      <div>
+        <label class="f" for="liEmail">البريد الإلكتروني</label>
+        <input id="liEmail" type="email" autocomplete="username" placeholder="doctor@example.com" />
+      </div>
+      <div>
+        <label class="f" for="liPass">كلمة المرور</label>
+        <input id="liPass" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-primary" id="liBtn">دخول</button>
+      <button class="btn btn-sm" id="liForgot" type="button">نسيت كلمة المرور؟</button>
+      <p class="msg" id="liMsg"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ اللوحة ============ -->
+<div id="panel" class="hidden">
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <h1>🩺 لوحة الطبيب — موقعي</h1>
+      <div class="who">
+        <a class="btn btn-sm btn-ghost" id="viewSite" target="_blank" rel="noopener" href="#">🌐 عرض موقعي</a>
+        <span id="whoEmail"></span>
+        <button class="btn btn-sm btn-ghost" id="outBtn">تسجيل الخروج 🚪</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="card section-gap hidden" id="noClinic">
+      <p class="msg err">لا يوجد موقع مرتبط بحسابك بعد. تواصل مع الإدارة لربط حسابك بالعيادة.</p>
+    </div>
+
+    <div id="editor" class="hidden">
+
+      <div class="tabs">
+        <button class="tab active" data-tab="tProfile" type="button">👤 بياناتي</button>
+        <button class="tab" data-tab="tAbout" type="button">📝 النبذة</button>
+        <button class="tab" data-tab="tServices" type="button">🧾 الخدمات</button>
+        <button class="tab" data-tab="tHours" type="button">🕒 مواعيد العمل</button>
+        <button class="tab" data-tab="tContact" type="button">📞 التواصل</button>
+      </div>
+
+      <!-- بياناتي -->
+      <div id="tProfile" class="tabpane card section-gap">
+        <h2 class="sec">👤 البيانات الأساسية</h2>
+        <div class="grid3" style="margin-top:10px">
+          <div><label class="f" for="fDoctorName">اسم الطبيب</label><input id="fDoctorName" type="text" /></div>
+          <div><label class="f" for="fDoctorTitle">اللقب</label><input id="fDoctorTitle" type="text" placeholder="استشاري / أخصائي" /></div>
+          <div><label class="f" for="fSpecialty">التخصص</label><input id="fSpecialty" type="text" /></div>
+          <div><label class="f" for="fSubSpecialty">التخصص الدقيق</label><input id="fSubSpecialty" type="text" /></div>
+          <div><label class="f" for="fClinicName">اسم العيادة</label><input id="fClinicName" type="text" /></div>
+          <div><label class="f" for="fSlug">رابط الموقع (slug)</label><input id="fSlug" type="text" disabled /></div>
+        </div>
+
+        <h3>الصور</h3>
+        <div class="grid3">
+          <div class="imgbox">
+            <label class="f">الصورة الشخصية</label>
+            <img id="pvProfile" class="pv" alt="" />
+            <input id="upProfile" type="file" accept="image/*" />
+            <input id="fProfileImage" type="text" placeholder="أو الصق رابط الصورة" />
+          </div>
+          <div class="imgbox">
+            <label class="f">صورة الغلاف</label>
+            <img id="pvCover" class="pv" alt="" />
+            <input id="upCover" type="file" accept="image/*" />
+            <input id="fCoverImage" type="text" placeholder="أو الصق رابط الصورة" />
+          </div>
+          <div class="imgbox">
+            <label class="f">الشعار</label>
+            <img id="pvLogo" class="pv" alt="" />
+            <input id="upLogo" type="file" accept="image/*" />
+            <input id="fLogo" type="text" placeholder="أو الصق رابط الصورة" />
+          </div>
+        </div>
+        <p class="msg" id="upMsg"></p>
+
+        <h3>مظهر الموقع وحالته</h3>
+        <div class="grid3">
+          <div><label class="f" for="fPrimaryColor">اللون الأساسي</label><input id="fPrimaryColor" type="color" value="#0f766e" /></div>
+          <div style="display:flex;align-items:flex-end">
+            <label class="chk"><input type="checkbox" id="fEnabled" /> الموقع مفعّل ويظهر للزوار</label>
+          </div>
+        </div>
+        <h3>الحجز من الموقع</h3>
+        <label class="chk"><input type="checkbox" id="fOnlineBooking" /> تفعيل الحجز من الموقع (يصل الحجز مباشرة إلى تطبيق العيادة)</label>
+        <label class="f" for="fBookingInstructions">تعليمات الحجز (اختياري — تظهر للمريض في نموذج الحجز)</label>
+        <textarea id="fBookingInstructions" rows="2" maxlength="300" placeholder="مثال: يرجى الحضور قبل الموعد بـ 10 دقائق"></textarea>
+      </div>
+
+      <!-- النبذة -->
+      <div id="tAbout" class="tabpane card section-gap hidden">
+        <h2 class="sec">📝 النبذة والمؤهلات</h2>
+        <label class="f" for="fShortIntro">جملة تعريفية قصيرة</label>
+        <input id="fShortIntro" type="text" />
+        <label class="f" for="fAboutDoctor">نبذة عن الطبيب</label>
+        <textarea id="fAboutDoctor" rows="5"></textarea>
+        <label class="f" for="fQualifications">المؤهلات</label>
+        <textarea id="fQualifications" rows="4"></textarea>
+        <label class="f" for="fExperience">الخبرات</label>
+        <textarea id="fExperience" rows="4"></textarea>
+      </div>
+
+      <!-- الخدمات -->
+      <div id="tServices" class="tabpane card section-gap hidden">
+        <h2 class="sec">🧾 الخدمات</h2>
+        <div class="grid3" style="margin-top:10px">
+          <div><label class="f" for="svName">اسم الخدمة *</label><input id="svName" type="text" placeholder="كشف" /></div>
+          <div><label class="f" for="svPrice">السعر</label><input id="svPrice" type="text" placeholder="٣٠٠ ج.م" /></div>
+          <div><label class="f" for="svDuration">المدة</label><input id="svDuration" type="text" placeholder="٣٠ دقيقة" /></div>
+        </div>
+        <label class="f" for="svDesc">الوصف</label>
+        <input id="svDesc" type="text" />
+        <div style="margin-top:12px"><button class="btn btn-primary" id="svAdd" type="button">➕ إضافة خدمة</button></div>
+        <p class="msg" id="svMsg"></p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الخدمة</th><th>الوصف</th><th>السعر</th><th>المدة</th><th>الحالة</th><th>إجراء</th></tr></thead>
+            <tbody id="svRows"><tr><td colspan="6" class="empty">لا توجد خدمات بعد.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- المواعيد -->
+      <div id="tHours" class="tabpane card section-gap hidden">
+        <h2 class="sec">🕒 مواعيد العمل</h2>
+        <div class="tbl-wrap">
+          <table class="hours">
+            <thead><tr><th>اليوم</th><th>من</th><th>إلى</th><th>مغلق</th></tr></thead>
+            <tbody id="hoursRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- التواصل -->
+      <div id="tContact" class="tabpane card section-gap hidden">
+        <h2 class="sec">📞 بيانات التواصل</h2>
+        <div class="grid3" style="margin-top:10px">
+          <div><label class="f" for="fPhone">الهاتف</label><input id="fPhone" type="tel" /></div>
+          <div><label class="f" for="fWhatsapp">واتساب (بكود الدولة)</label><input id="fWhatsapp" type="tel" /></div>
+          <div><label class="f" for="fEmail">البريد الإلكتروني</label><input id="fEmail" type="email" /></div>
+        </div>
+        <label class="f" for="fAddress">العنوان</label>
+        <input id="fAddress" type="text" />
+        <label class="f" for="fGoogleMapsUrl">رابط خرائط جوجل</label>
+        <input id="fGoogleMapsUrl" type="url" />
+        <label class="f" for="fBookingUrl">رابط الحجز (اختياري)</label>
+        <input id="fBookingUrl" type="url" placeholder="يُستخدم فقط إذا كان الحجز من الموقع غير مفعّل" />
+
+        <h3>حسابات التواصل</h3>
+        <div class="grid3">
+          <div><label class="f" for="soFacebook">فيسبوك</label><input id="soFacebook" type="url" /></div>
+          <div><label class="f" for="soInstagram">إنستجرام</label><input id="soInstagram" type="url" /></div>
+          <div><label class="f" for="soTwitter">تويتر / X</label><input id="soTwitter" type="url" /></div>
+          <div><label class="f" for="soYoutube">يوتيوب</label><input id="soYoutube" type="url" /></div>
+          <div><label class="f" for="soTiktok">تيك توك</label><input id="soTiktok" type="url" /></div>
+          <div><label class="f" for="soLinkedin">لينكدإن</label><input id="soLinkedin" type="url" /></div>
+        </div>
+      </div>
+
+      <div class="savebar">
+        <button class="btn btn-primary" id="saveBtn" type="button">💾 حفظ التغييرات</button>
+        <span class="msg" id="saveMsg"></span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script type="module" src="doctor.js?v=6"></script>
+</body>
+</html>
