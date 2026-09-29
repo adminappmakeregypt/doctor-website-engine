@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>تحويل…</title>
+<script>
+  /* GitHub Pages serves this file for unknown paths such as /dr-ahmed.
+     We forward the slug to index.html so the engine can load it. */
+  (function () {
+    var parts = location.pathname.split('/').filter(Boolean);
+    var base = '';
+    var slug = '';
+    if (parts.length > 1) { base = '/' + parts[0]; slug = parts[parts.length - 1]; }
+    else if (parts.length === 1) { slug = parts[0]; }
+    location.replace(base + '/index.html?slug=' + encodeURIComponent(slug) + location.hash);
+  })();
+</script>
+</head>
+<body></body>
+</html>
