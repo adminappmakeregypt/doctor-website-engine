@@ -1,0 +1,114 @@
+/* ============ Doctor Website Engine — admin dashboard ============ */
+:root {
+  --brand: #0f766e;
+  --brand-dark: #115e59;
+  --brand-soft: #e6f4f1;
+  --ink: #16202e;
+  --muted: #64748b;
+  --line: #e3e8ef;
+  --bg: #f4f7fa;
+  --card: #ffffff;
+  --ok: #16a34a;
+  --off: #94a3b8;
+  --danger: #dc2626;
+  --radius: 14px;
+  --shadow: 0 10px 28px rgba(16, 32, 46, .08);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", Tahoma, "Cairo", Arial, sans-serif;
+  background: var(--bg); color: var(--ink); direction: rtl; line-height: 1.7;
+}
+a { color: inherit; text-decoration: none; }
+.hidden { display: none !important; }
+.wrap { width: min(1150px, 94%); margin: 0 auto; }
+
+/* ---------- login ---------- */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.login-box {
+  width: min(420px, 100%); background: var(--card); border: 1px solid var(--line);
+  border-radius: 18px; box-shadow: var(--shadow); padding: 28px;
+}
+.login-box h1 { margin: 6px 0 4px; font-size: 22px; }
+.login-box .sub { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+.login-ico { font-size: 40px; }
+
+/* ---------- topbar ---------- */
+.topbar {
+  background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+  color: #fff; padding: 14px 0;
+}
+.topbar-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.topbar h1 { font-size: 18px; margin: 0; }
+.topbar .who { margin-inline-start: auto; font-size: 13px; opacity: .95; display: flex; align-items: center; gap: 10px; }
+
+/* ---------- cards / stats ---------- */
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+}
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 20px 0; }
+.stat { text-align: center; }
+.stat b { display: block; font-size: 26px; }
+.stat span { color: var(--muted); font-size: 13px; }
+
+/* ---------- form ---------- */
+.grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+label.f { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=email], input[type=password], input[type=tel], select, textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; font: inherit; background: #fff; color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; justify-content: center;
+  padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line);
+  background: #fff; cursor: pointer; font: inherit; color: var(--ink);
+}
+.btn:hover { background: #f8fafc; }
+.btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-dark); }
+.btn-sm { padding: 6px 10px; font-size: 13px; }
+.btn-danger { color: var(--danger); border-color: #fecaca; }
+.btn-ghost { background: transparent; border-color: rgba(255,255,255,.4); color: #fff; }
+.btn-ghost:hover { background: rgba(255,255,255,.12); }
+
+h2.sec { font-size: 17px; margin: 0 0 12px; }
+.sub { color: var(--muted); font-size: 13px; }
+.msg { margin: 10px 0 0; font-size: 14px; min-height: 20px; }
+.msg.ok { color: var(--ok); }
+.msg.err { color: var(--danger); }
+
+/* ---------- table ---------- */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: right; font-size: 14px; vertical-align: middle; }
+th { color: var(--muted); font-weight: 600; font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; }
+.badge.on { background: #dcfce7; color: #166534; }
+.badge.off { background: #e2e8f0; color: #475569; }
+.row-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.slug-link { color: var(--brand); font-weight: 600; }
+.empty { text-align: center; color: var(--muted); padding: 26px 0; }
+
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar input[type=text] { max-width: 280px; }
+.section-gap { margin-bottom: 20px; }
+footer.pg { text-align: center; color: var(--muted); font-size: 13px; padding: 26px 0; }
+
+@media (max-width: 860px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+
+/* ---- image upload boxes (logo / doctor photo) ---- */
+.up-box{border:1px dashed #cbd5e1;border-radius:12px;padding:10px;display:grid;gap:8px;background:#f8fafc}
+.up-box input[type=file]{font-size:12px}
+.up-box .pv{display:none;width:100%;max-height:150px;object-fit:contain;border-radius:10px;background:#fff}
+.up-box .pv.show{display:block}
