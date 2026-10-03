@@ -1,0 +1,271 @@
+rules_version = '2';
+
+// ===== Clinic Management + Doctor Website Engine v34 — full Firestore rules =====
+// Replace everything in Firebase Console → Firestore → Rules with this file.
+//
+// Tenant model (enforced HERE, not in JavaScript):
+//   signed-in user → users/{uid}.clinicId            (primary, written by platform admin)
+//                  → clinicMembers/{email}.clinicId  (bridge for existing Clinic app accounts,
+//                                                     written by platform admin via clinic-members.html)
+//   A user may touch clinics/{clinicId}/... only when that clinicId matches.
+// Platform admin = mostafa.hegab83@gmail.com, or users/{uid}.role in ["superadmin","super_admin"].
+// NOTE: role "admin" in the Clinic app means CLINIC manager — it is NOT a platform admin.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------- identity (v32: UID first) ----------------
+    // Effective profile = users/{uid} when it exists (PRIMARY, keyed by Firebase UID).
+    // clinicMembers/{email} is only a legacy/invitation bridge used until the
+    // user's first login creates users/{uid}. A users/{uid} doc always wins, so
+    // deactivating it blocks access even if an old clinicMembers record remains.
+    function isSignedIn() { return request.auth != null; }
+    function authEmail() {
+      return isSignedIn() && request.auth.token.email != null ? request.auth.token.email.lower() : "";
+    }
+    function isSuperAdmin() { return authEmail() in ["mostafa.hegab83@gmail.com"]; }
+    function userPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function hasUserDoc() { return isSignedIn() && exists(userPath()); }
+    function userDoc() { return get(userPath()).data; }
+    function memberPath() { return /databases/$(database)/documents/clinicMembers/$(authEmail()); }
+    function hasMemberDoc() { return authEmail() != "" && exists(memberPath()); }
+    function memberDoc() { return get(memberPath()).data; }
+    function prof() { return hasUserDoc() ? userDoc() : (hasMemberDoc() ? memberDoc() : {}); }
+    function profActive() { return prof().get("isActive", true) != false; }
+
+    function isGlobalAdmin() {
+      return isSuperAdmin() ||
+        (hasUserDoc() && userDoc().get("role", "") in ["superadmin", "super_admin"] &&
+         userDoc().get("isActive", true) != false);
+    }
+
+    // ---------------- v34: explicit, role-based clinic permissions ----------------
+    // v33 BUG fixed: canManageClinic() used to be true for EVERY member of a clinic,
+    // so an ordinary user/doctor had administrator-level access. Now:
+    //   admin  → everything in his clinic + manage that clinic's users
+    //   doctor → day-to-day clinic data + medical records + his schedule/website
+    //   user   → day-to-day clinic data (bookings, doctor page) — no settings, no deletes
+    function memberOf(clinicId) {
+      return isSignedIn() && profActive() && clinicId is string && clinicId != "" &&
+             prof().get("clinicId", "") == clinicId;
+    }
+    function roleOf() { return prof().get("role", "user"); }
+    function isClinicAdminOf(clinicId) { return memberOf(clinicId) && roleOf() in ["admin", "owner"]; }
+    function isClinicUserOf(clinicId)  { return memberOf(clinicId) && roleOf() == "user"; }
+    // Website editors of a clinic: its doctor or its clinic manager (not ordinary staff).
+    function isDoctorOf(clinicId) { return memberOf(clinicId) && roleOf() in ["doctor", "admin", "owner"]; }
+    function isStaffOf(clinicId)  { return memberOf(clinicId) && roleOf() in ["admin", "owner", "doctor", "user"]; }
+
+    function canManageClinic(clinicId)    { return isGlobalAdmin() || isClinicAdminOf(clinicId); }
+    function canReadClinicData(clinicId)  { return isGlobalAdmin() || isStaffOf(clinicId); }
+    function canWriteClinicData(clinicId) { return isGlobalAdmin() || isStaffOf(clinicId); } // create/update only
+    function clinicRole(r) { return r in ["admin", "user", "doctor"]; }
+
+    // v25: website owner = Firebase UID listed in websiteSettings/main.ownerUids (written only by platform admin)
+    function isSiteOwner(clinicId) {
+      return isSignedIn() && exists(sitePath(clinicId)) &&
+             request.auth.uid in get(sitePath(clinicId)).data.get("ownerUids", []);
+    }
+
+    // ---------------- online booking helpers (public, no login) ----------------
+    function sitePath(clinicId) { return /databases/$(database)/documents/clinics/$(clinicId)/websiteSettings/main; }
+    function bookingOpen(clinicId) {
+      return exists(sitePath(clinicId)) &&
+             get(sitePath(clinicId)).data.get("isWebsiteEnabled", true) != false &&
+             get(sitePath(clinicId)).data.get("onlineBookingEnabled", true) != false;
+    }
+    function slotKey(d) { return d.date + "_" + d.time.replace(":", "") + "_" + d.doctorId; }
+    function toMin(t) { return int(t.split(":")[0]) * 60 + int(t.split(":")[1]); }
+
+    // The slot must be a real, free slot of THIS doctor in the schedule published by the clinic.
+    function validSlot(clinicId, d) {
+      let p = get(/databases/$(database)/documents/clinics/$(clinicId)/publicAvailability/main).data;
+      let s = p.sched[d.doctorId];
+      let m = toMin(d.time);
+      let step = s.slotMinutes;
+      let day = timestamp.date(int(d.date.split("-")[0]), int(d.date.split("-")[1]), int(d.date.split("-")[2]));
+      return d.doctorId in p.doctorIds &&
+             (day.dayOfWeek() % 7) in s.days &&                      // Sunday=0 … Saturday=6
+             day > request.time - duration.value(1, "d") &&
+             day < request.time + duration.value(60, "d") &&
+             m >= toMin(s.start) && m + step <= toMin(s.end) &&
+             (m - toMin(s.start)) % step == 0 &&
+             (s.breakStart == "" || s.breakEnd == "" ||
+                m + step <= toMin(s.breakStart) || m >= toMin(s.breakEnd)) &&
+             !((d.date + "|" + d.time + "|" + d.doctorId) in p.busy);
+    }
+
+    function validWebBooking(clinicId, slotId) {
+      let d = request.resource.data;
+      let dirPath = /databases/$(database)/documents/websiteDirectory/$(d.slug);
+      return d.keys().hasOnly(["ref","fullName","phone","notes","date","time","doctor","doctorId","slug","clinicId","source","status","imported","createdAt"]) &&
+             d.keys().hasAll(["ref","fullName","phone","date","time","doctorId","slug","clinicId","source","status","imported","createdAt"]) &&
+             d.clinicId == clinicId && d.source == "website" && d.status == "مجدول" && d.imported == false &&
+             d.slug is string && d.slug.matches("^[a-z0-9-]{1,60}$") &&
+             d.doctorId is string && d.doctorId.matches("^[A-Za-z0-9_-]{2,40}$") &&
+             // slug → clinicId → doctorId comes from websiteDirectory (admin-only write), never from the visitor
+             exists(dirPath) &&
+             get(dirPath).data.clinicId == clinicId &&
+             (get(dirPath).data.get("doctorId", "") == d.doctorId || get(dirPath).data.get("doctorId", "") == "") &&
+             d.fullName is string && d.fullName.size() >= 3 && d.fullName.size() <= 80 &&
+             d.phone is string && d.phone.matches("^[+]?[0-9]{8,15}$") &&
+             d.date is string && d.date.matches("^20[0-9]{2}-[0-9]{2}-[0-9]{2}$") &&
+             d.time is string && d.time.matches("^[0-9]{2}:[0-9]{2}$") &&
+             d.ref is string && d.ref.matches("^[A-Z0-9]{6}$") &&
+             d.createdAt is int && d.createdAt > request.time.toMillis() - 600000 &&
+             d.createdAt < request.time.toMillis() + 600000 &&
+             (!("notes" in d) || (d.notes is string && d.notes.size() <= 300)) &&
+             (!("doctor" in d) || (d.doctor is string && d.doctor.size() <= 120)) &&
+             slotKey(d) == slotId &&
+             validSlot(clinicId, d);
+    }
+
+    // ---------- Clinic Management (tenant-protected, role-based) ----------
+    // Records: every active staff member of the clinic may read/create/update
+    // (the app lets user + doctor open the booking and doctor pages).
+    // Deleting records is reserved for the clinic admin / platform admin.
+    match /clinics/{clinicId}/bookings/{bookingId} {
+      allow read, create, update: if canWriteClinicData(clinicId);
+      allow delete: if canManageClinic(clinicId);
+    }
+    match /clinics/{clinicId}/prescriptions/{prescriptionId} {
+      allow read, create, update: if canWriteClinicData(clinicId);
+      allow delete: if canManageClinic(clinicId);
+    }
+    match /clinics/{clinicId}/patientRecords/{doc} {
+      allow read, create, update: if canWriteClinicData(clinicId);
+      allow delete: if canManageClinic(clinicId);
+    }
+    match /clinics/{clinicId}/dentalCharts/{doc} {
+      allow read, create, update: if canWriteClinicData(clinicId);
+      allow delete: if canManageClinic(clinicId);
+    }
+    // appData: bookings + audit log = everyone on staff; doctors list/schedule =
+    // doctor or admin; clinic settings, specialty, majors = admin only.
+    match /clinics/{clinicId}/appData/{docId} {
+      allow read: if canReadClinicData(clinicId);
+      allow create, update: if canManageClinic(clinicId) ||
+        (canWriteClinicData(clinicId) && docId in ["clinic_bookings_v1", "clinic_audit_v1"]) ||
+        (isDoctorOf(clinicId) && docId == "clinic_doctors_v1");
+      allow delete: if canManageClinic(clinicId);
+    }
+
+    // ---------- Clinics (root record) ----------
+    match /clinics/{clinicId} {
+      allow read: if canReadClinicData(clinicId);
+      allow write: if isGlobalAdmin();
+    }
+
+    // ---------- Users (keyed by Firebase UID — the source of truth) ----------
+    function userKeysOk() {
+      return request.resource.data.keys().hasOnly(["email", "name", "role", "clinicId", "isActive",
+        "createdAt", "updatedAt", "createdBy", "updatedBy", "linkedFrom", "invitedBy"]);
+    }
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isGlobalAdmin() ||
+                                      isClinicAdminOf(resource.data.get("clinicId", "")));
+      // Platform admin: any clinic, any role.
+      // Clinic admin: only inside his own clinic, only admin/user/doctor, always as an explicit active flag.
+      // First login: a user may create HIS OWN record copied exactly from an
+      // active clinicMembers invitation (only if no UID record exists yet).
+      allow create: if isGlobalAdmin() ||
+        (isClinicAdminOf(request.resource.data.get("clinicId", "")) && userKeysOk() &&
+           clinicRole(request.resource.data.get("role", "")) &&
+           request.resource.data.get("email", "") is string &&
+           request.resource.data.get("isActive", true) is bool) ||
+        (request.auth.uid == uid && hasMemberDoc() &&
+           memberDoc().get("isActive", true) != false &&
+           clinicRole(memberDoc().get("role", "user")) &&
+           request.resource.data.keys().hasOnly(["email", "name", "role", "clinicId", "isActive", "createdAt", "updatedAt", "linkedFrom"]) &&
+           request.resource.data.get("email", "") == authEmail() &&
+           request.resource.data.get("clinicId", "") == memberDoc().get("clinicId", "") &&
+           request.resource.data.get("role", "") == memberDoc().get("role", "user") &&
+           request.resource.data.get("isActive", true) == true);
+      // v34: NO self-repair path any more (it let an invitation silently move a user
+      // to another clinic). Only the platform admin repairs/moves accounts.
+      allow update: if isGlobalAdmin() ||
+        // clinic admin edits OTHER users of his clinic: name / role / active only
+        (request.auth.uid != uid &&
+           isClinicAdminOf(resource.data.get("clinicId", "")) &&
+           clinicRole(resource.data.get("role", "")) &&
+           clinicRole(request.resource.data.get("role", "")) &&
+           request.resource.data.get("isActive", true) is bool &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "role", "isActive", "updatedAt", "updatedBy"])) ||
+        // anyone (still active) may change only his own display name
+        (request.auth.uid == uid && resource.data.get("isActive", true) != false &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "updatedAt", "updatedBy"]));
+      // Deactivate (isActive=false) instead of deleting. Permanent removal = platform admin only.
+      allow delete: if isGlobalAdmin();
+    }
+    // Email bridge: invitations for emails whose UID is not known yet (+ legacy accounts).
+    // It never overrides an existing users/{uid} record.
+    match /clinicMembers/{email} {
+      allow read: if isGlobalAdmin() || authEmail() == email ||
+                     (resource != null && isClinicAdminOf(resource.data.get("clinicId", "")));
+      allow create: if isGlobalAdmin() ||
+        (email != authEmail() &&
+           isClinicAdminOf(request.resource.data.get("clinicId", "")) &&
+           clinicRole(request.resource.data.get("role", "")) &&
+           request.resource.data.keys().hasOnly(["clinicId", "role", "name", "isActive", "invitedBy", "updatedAt", "updatedBy"]));
+      allow update: if isGlobalAdmin() ||
+        (isClinicAdminOf(resource.data.get("clinicId", "")) &&
+           request.resource.data.get("clinicId", "") == resource.data.get("clinicId", "") &&
+           clinicRole(resource.data.get("role", "")) &&
+           clinicRole(request.resource.data.get("role", "")) &&
+           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "role", "isActive", "invitedBy", "updatedAt", "updatedBy"]) &&
+           (email != authEmail() ||
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "updatedAt", "updatedBy"])));
+      allow delete: if isGlobalAdmin();
+    }
+
+    // ---------- Public website ----------
+    match /websiteDirectory/{slug} {
+      allow read: if true;
+      allow write: if isGlobalAdmin();
+    }
+    match /clinics/{clinicId}/websiteSettings/{docId} {
+      allow read: if true;
+      allow create, delete: if isGlobalAdmin() || isDoctorOf(clinicId);
+      // owners/doctors edit content but can never change the owner list
+      allow update: if isGlobalAdmin() ||
+        ((isSiteOwner(clinicId) || isDoctorOf(clinicId)) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(["ownerUids"]));
+    }
+    match /clinics/{clinicId}/services/{serviceId} {
+      allow read: if true;
+      allow write: if isGlobalAdmin() || isSiteOwner(clinicId) || isDoctorOf(clinicId);
+    }
+
+    // ---------- Online booking ----------
+    // Times-only schedule published by Clinic Management (no patient data).
+    match /clinics/{clinicId}/publicAvailability/{docId} {
+      allow read: if true;
+      // admin/doctor publish the schedule; reception staff may only refresh the busy list
+      allow write: if canManageClinic(clinicId) || isDoctorOf(clinicId) ||
+        (canWriteClinicData(clinicId) && resource != null &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["busy", "updatedAt"]));
+    }
+    // Public "slot taken" lock, one per clinic + doctor + date + time.
+    // Created only together with its booking, never overwritten.
+    match /clinics/{clinicId}/bookedSlots/{slotId} {
+      allow read: if true; // contains only date, time, doctorId
+      allow create: if bookingOpen(clinicId) &&
+        request.resource.data.keys().hasOnly(["date", "time", "doctorId", "createdAt"]) &&
+        request.resource.data.keys().hasAll(["date", "time", "doctorId"]) &&
+        request.resource.data.date is string && request.resource.data.time is string &&
+        request.resource.data.doctorId is string &&
+        slotKey(request.resource.data) == slotId &&
+        existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/websiteBookings/$(slotId)) &&
+        !exists(/databases/$(database)/documents/clinics/$(clinicId)/websiteBookings/$(slotId));
+      allow update: if false;
+      allow delete: if canWriteClinicData(clinicId); // release lock on cancellation
+    }
+    // Patient requests: the public can only CREATE; only that clinic's staff can read.
+    match /clinics/{clinicId}/websiteBookings/{slotId} {
+      allow create: if bookingOpen(clinicId) && validWebBooking(clinicId, slotId) &&
+        !exists(/databases/$(database)/documents/clinics/$(clinicId)/bookedSlots/$(slotId)) &&
+        existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/bookedSlots/$(slotId));
+      allow read, update, delete: if canWriteClinicData(clinicId); // staff import requests
+    }
+  }
+}
