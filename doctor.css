@@ -1,0 +1,42 @@
+/* ===== Doctor dashboard — يكمل admin.css ===== */
+.tabs {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;
+}
+.tab {
+  border: 1px solid #e2e8f0; background: #fff; color: #334155;
+  border-radius: 999px; padding: 8px 16px; cursor: pointer;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+}
+.tab:hover { border-color: var(--brand); color: var(--brand); }
+.tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+.tabpane h3 { margin: 18px 0 8px; font-size: 15px; color: #475569; }
+
+.imgbox { display: flex; flex-direction: column; gap: 6px; }
+.imgbox .pv {
+  width: 100%; height: 120px; object-fit: cover;
+  border-radius: 10px; border: 1px dashed #cbd5e1; background: #f8fafc; display: none;
+}
+.imgbox .pv.show { display: block; }
+.imgbox input[type="file"] { font-size: 12px; }
+
+.chkline { display: flex; align-items: flex-end; }
+.chk { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.chk input { width: auto; }
+
+.tbl.hours td { vertical-align: middle; }
+.tbl.hours input[type="time"] { width: 130px; }
+.tbl.hours input[type="checkbox"] { width: auto; }
+
+.savebar {
+  position: sticky; bottom: 0; margin-top: 16px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 14px;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, .06);
+}
+.savebar .btn { margin: 0; }
+
+@media (max-width: 700px) {
+  .tabs { gap: 6px; }
+  .tab { padding: 7px 12px; font-size: 13px; }
+}
