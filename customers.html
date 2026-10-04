@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>إدارة العملاء والاشتراكات — لوحة المدير</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="favicon.ico" type="image/x-icon" />
+<link rel="stylesheet" href="admin.css?v=4" />
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-ico">🛡️</div>
+    <h1>إدارة العملاء</h1>
+    <p class="sub">سجّل الدخول بحساب مدير المنصة.</p>
+    <div style="display:grid;gap:10px">
+      <div><label class="f" for="liEmail">البريد الإلكتروني</label><input id="liEmail" type="email" autocomplete="username" /></div>
+      <div><label class="f" for="liPass">كلمة المرور</label><input id="liPass" type="password" autocomplete="current-password" /></div>
+      <button class="btn btn-primary" id="liBtn">دخول</button>
+      <p class="msg" id="liMsg"></p>
+    </div>
+  </div>
+</div>
+
+<div id="panel" class="hidden">
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <h1>🛡️ لوحة المدير — مواقع الأطباء</h1>
+      <nav class="adm-nav">
+        <a href="admin.html">🩺 مواقع الأطباء</a>
+        <a href="customers.html" class="active">👨‍⚕️ إدارة العملاء</a>
+      </nav>
+      <div class="who">
+        <span id="whoEmail"></span>
+        <button class="btn btn-sm btn-ghost" id="outBtn">تسجيل الخروج 🚪</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h2 class="sec" style="margin-top:20px">👨‍⚕️ إدارة العملاء والاشتراكات</h2>
+
+    <div class="stats stats6">
+      <div class="card stat"><b id="kTotal">0</b><span>👨‍⚕️ إجمالي العملاء</span></div>
+      <div class="card stat"><b id="kActive">0</b><span>🟢 الاشتراكات النشطة</span></div>
+      <div class="card stat"><b id="kSoon">0</b><span>🟡 تنتهي خلال 30 يوم</span></div>
+      <div class="card stat"><b id="kExpired">0</b><span>🔴 الاشتراكات المنتهية</span></div>
+      <div class="card stat"><b id="kOffers">0</b><span>🎁 حصلوا على عروض</span></div>
+      <div class="card stat"><b id="kSites">0</b><span>🌐 المواقع النشطة</span></div>
+    </div>
+
+    <div class="card section-gap">
+      <div class="toolbar">
+        <input type="text" id="cq" placeholder="بحث: الاسم، الإيميل، الهاتف، العيادة، Clinic ID، Slug…" />
+        <select id="fSt" style="max-width:170px">
+          <option value="">كل الحالات</option>
+          <option value="active">🟢 نشط</option>
+          <option value="soon">🟡 قريب من التجديد</option>
+          <option value="expired">🔴 منتهي</option>
+          <option value="inactive">⚪ غير نشط</option>
+          <option value="trial">🔵 تجريبي</option>
+          <option value="none">بدون اشتراك مسجل</option>
+        </select>
+        <select id="fSpec" style="max-width:170px"><option value="">كل التخصصات</option></select>
+        <select id="fType" style="max-width:150px"><option value="">كل الأنواع</option></select>
+        <select id="fOffer" style="max-width:170px"><option value="">كل العروض</option></select>
+        <label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="fArch" /> إظهار المؤرشفين</label>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="addCust">➕ إضافة عميل</button>
+        <button class="btn btn-sm" id="expCsv">📥 Export Excel / CSV</button>
+        <button class="btn btn-sm" id="reload">↻ تحديث</button>
+        <span class="sub" id="loadMsg"></span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="cust-tbl">
+          <thead><tr>
+            <th>رقم العميل</th><th>اسم الدكتور</th><th>البريد الإلكتروني</th><th>رقم الهاتف</th><th>اسم العيادة</th>
+            <th>التخصص</th><th>المستخدمون</th><th>بداية الاشتراك</th><th>تاريخ التجديد</th><th>الحالة</th>
+            <th>العرض / الخصم</th><th>القيمة</th><th>ملاحظات</th><th>آخر تحديث</th><th>إجراء</th>
+          </tr></thead>
+          <tbody id="cRows"><tr><td colspan="15" class="empty">جارٍ التحميل…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <footer class="pg">لوحة المدير — Doctor Website Engine</footer>
+</div>
+
+<!-- ===== نموذج العميل ===== -->
+<div id="custOverlay" class="login-screen hidden editor-overlay">
+  <div class="login-box editor-dialog">
+    <div class="editor-head">
+      <h2 class="sec" id="cfTitle">➕ إضافة عميل</h2>
+      <button class="btn btn-sm" id="cfClose" type="button">✖ إغلاق</button>
+    </div>
+
+    <h3 class="cf-h">👨‍⚕️ بيانات الدكتور</h3>
+    <div class="grid3">
+      <div><label class="f" for="cfName">اسم الدكتور *</label><input id="cfName" type="text" /></div>
+      <div><label class="f" for="cfEmail">Email</label><input id="cfEmail" type="email" dir="ltr" /></div>
+      <div><label class="f" for="cfPhone">رقم الهاتف</label><input id="cfPhone" type="tel" dir="ltr" /></div>
+      <div><label class="f" for="cfSpec">التخصص</label><input id="cfSpec" type="text" /></div>
+      <div><label class="f" for="cfClinicName">اسم العيادة</label><input id="cfClinicName" type="text" /></div>
+    </div>
+
+    <h3 class="cf-h">🌐 بيانات الموقع</h3>
+    <div class="grid3">
+      <div><label class="f" for="cfSite">ربط بموقع موجود</label><select id="cfSite"><option value="">— بدون موقع —</option></select></div>
+      <div><label class="f" for="cfClinicId">Clinic ID</label><input id="cfClinicId" type="text" dir="ltr" /></div>
+      <div><label class="f" for="cfSlug">Website ID / Slug</label><input id="cfSlug" type="text" dir="ltr" /></div>
+      <div style="grid-column:1/-1"><label class="f" for="cfUrl">رابط الموقع</label><input id="cfUrl" type="url" dir="ltr" /></div>
+    </div>
+
+    <h3 class="cf-h">💳 بيانات الاشتراك</h3>
+    <div class="grid3">
+      <div><label class="f" for="cfType">نوع الاشتراك</label>
+        <select id="cfType">
+          <option value="website">Website فقط</option>
+          <option value="clinic">Clinic Management فقط</option>
+          <option value="both">Website + Clinic Management</option>
+          <option value="trial">تجريبي</option>
+        </select></div>
+      <div><label class="f" for="cfStatus">حالة يدوية</label>
+        <select id="cfStatus">
+          <option value="auto">تلقائي (حسب تاريخ التجديد)</option>
+          <option value="trial">🔵 تجريبي</option>
+          <option value="inactive">⚪ غير نشط</option>
+        </select></div>
+      <div><label class="f" for="cfDuration">مدة الاشتراك (بالأشهر)</label><input id="cfDuration" type="number" min="0" /></div>
+      <div><label class="f" for="cfStart">تاريخ بداية الاشتراك</label><input id="cfStart" type="date" /></div>
+      <div><label class="f" for="cfRenew">تاريخ التجديد</label><input id="cfRenew" type="date" /></div>
+      <div><label class="f" for="cfPrice">قيمة الاشتراك</label><input id="cfPrice" type="number" min="0" step="any" /></div>
+      <div><label class="f" for="cfPay">طريقة الدفع</label>
+        <select id="cfPay"><option value="">—</option><option>نقدي</option><option>تحويل بنكي</option><option>فودافون كاش</option><option>إنستاباي</option><option>بطاقة</option><option>أخرى</option></select></div>
+      <div><label class="f" for="cfPayStatus">حالة الدفع</label>
+        <select id="cfPayStatus"><option value="">—</option><option>مدفوع</option><option>مدفوع جزئياً</option><option>غير مدفوع</option><option>مجاني</option></select></div>
+      <div><label class="f" for="cfOffer">العرض</label>
+        <select id="cfOffer">
+          <option value="">بدون عرض</option>
+          <option>🎁 Website مجاني</option><option>🎁 أول سنة مجانية</option><option>🎁 خصم 50%</option>
+          <option>🎁 خصم خاص</option><option>🎁 Referral</option><option>🎁 Founding Customer</option><option>🎁 عرض خاص</option>
+          <option value="__custom">✏️ عرض مخصص…</option>
+        </select>
+        <input id="cfOfferCustom" type="text" class="hidden" placeholder="اكتب العرض" style="margin-top:6px" /></div>
+      <div><label class="f" for="cfDiscPct">نسبة الخصم %</label><input id="cfDiscPct" type="number" min="0" max="100" step="any" /></div>
+      <div><label class="f" for="cfDiscVal">قيمة الخصم</label><input id="cfDiscVal" type="number" min="0" step="any" /></div>
+      <div><label class="f">السعر بعد الخصم</label><input id="cfFinal" type="text" readonly /></div>
+      <div class="check-field"><label class="sub" style="display:flex;gap:6px"><input type="checkbox" id="cfFreeSite" /> حصل على Website مجاني</label></div>
+      <div class="check-field"><label class="sub" style="display:flex;gap:6px"><input type="checkbox" id="cfFreePeriod" /> حصل على فترة مجانية</label></div>
+      <div><label class="f" for="cfFreeMonths">عدد الأشهر المجانية</label><input id="cfFreeMonths" type="number" min="0" /></div>
+      <div style="grid-column:1/-1"><label class="f" for="cfSubNotes">ملاحظات الاشتراك</label><textarea id="cfSubNotes" rows="2"></textarea></div>
+    </div>
+
+    <h3 class="cf-h">📝 ملاحظات العميل</h3>
+    <textarea id="cfNotes" rows="4" placeholder="طلب تصميم، مشكلة في الحساب، متابعة الدفع، موعد التجديد…"></textarea>
+
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary" id="cfSave">💾 حفظ</button>
+      <button class="btn btn-danger hidden" id="cfArchive">🗄️ أرشفة</button>
+      <span class="msg" id="cfMsg" style="margin:0"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== المستخدمون المرتبطون ===== -->
+<div id="usersOverlay" class="login-screen hidden editor-overlay">
+  <div class="login-box editor-dialog">
+    <div class="editor-head">
+      <div><h2 class="sec">👥 المستخدمون المرتبطون</h2><p class="sub" id="uSub"></p></div>
+      <button class="btn btn-sm" id="uClose" type="button">✖ إغلاق</button>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>اسم المستخدم</th><th>Email</th><th>Firebase UID</th><th>Role</th><th>تاريخ الإنشاء</th><th>الحالة</th><th>آخر دخول</th><th>ملاحظات</th></tr></thead>
+      <tbody id="uRows"></tbody></table>
+    </div>
+    <p class="sub">الحسابات تُدار من نظام الدخول الحالي (لم يتم إنشاء نظام جديد). الملاحظات تُحفظ في سجل العميل فقط.</p>
+    <button class="btn btn-primary" id="uSave">💾 حفظ الملاحظات</button>
+    <span class="msg" id="uMsg"></span>
+  </div>
+</div>
+
+<script type="module" src="customers.js?v=1"></script>
+</body>
+</html>
