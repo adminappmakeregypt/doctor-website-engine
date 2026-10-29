@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>ربط حسابات العيادات</title>
+<link rel="stylesheet" href="admin.css" />
+<style>
+  body{padding:30px 14px} .box{max-width:760px;margin:auto}
+  textarea{width:100%;min-height:320px;direction:ltr;font-family:monospace;font-size:13px;padding:10px;border:1px solid #d6dde6;border-radius:10px}
+  input{padding:10px;border:1px solid #d6dde6;border-radius:10px;width:100%;margin-bottom:8px}
+  .log{white-space:pre-wrap;direction:ltr;font-family:monospace;font-size:12px;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="box card">
+  <h2 style="margin-top:0">ربط حسابات تطبيق العيادة بعياداتها</h2>
+  <p class="sub"><b>v32: هذه الصفحة للترحيل مرة واحدة فقط.</b> الحسابات الجديدة تُضاف من تطبيق العيادة ← صفحة المدير ← «إدارة المستخدمين».
+    هنا تُسجَّل الحسابات القديمة (التي كانت في auth.js) كدعوات clinicMembers/{email}؛ وعند أول دخول لكل مستخدم
+    يُنشأ له تلقائياً سجله الأساسي users/{UID}. السجلات الموجودة مسبقاً لا تُغيَّر (لا يُعاد تفعيل حساب موقوف).</p>
+  <div id="login">
+    <input id="em" type="email" placeholder="بريد مدير المنصة" />
+    <input id="pw" type="password" placeholder="كلمة المرور" />
+    <button class="btn btn-primary" id="inBtn">دخول</button>
+  </div>
+  <div id="work" style="display:none">
+    <p class="sub">سطر لكل حساب: <b dir="ltr">email,clinicId,role</b> — الدور admin (مدير العيادة) أو user أو doctor.
+      الصق السطور هنا عند الحاجة (لا توجد قائمة مخزنة في الكود).</p>
+    <textarea id="list" placeholder="email,clinicId,role&#10;doctor@example.com,clinic20,admin"></textarea>
+    <button class="btn btn-primary" id="saveBtn" style="margin-top:10px">حفظ الربط</button>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const $ = (id) => document.getElementById(id);
+const log = (m) => { $("log").textContent += m + "\n"; };
+$("inBtn").onclick = async () => {
+  try { await signInWithEmailAndPassword(auth, $("em").value.trim(), $("pw").value); }
+  catch (e) { log("تعذر الدخول: " + (e.code || e.message)); }
+};
+onAuthStateChanged(auth, (u) => {
+  $("login").style.display = u ? "none" : "";
+  $("work").style.display = u ? "" : "none";
+});
+$("saveBtn").onclick = async () => {
+  $("log").textContent = "";
+  const lines = $("list").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  let ok = 0;
+  for (const line of lines) {
+    const [email, clinicId, role] = line.split(",").map((x) => (x || "").trim());
+    if (!email || !email.includes("@") || !/^[A-Za-z0-9_-]+$/.test(clinicId || "")) { log("✗ سطر غير صالح: " + line); continue; }
+    try {
+      if ((await getDoc(doc(db, "clinicMembers", email.toLowerCase()))).exists()) { ok++; log("• موجود مسبقاً: " + email); continue; }
+      await setDoc(doc(db, "clinicMembers", email.toLowerCase()),
+        { clinicId, role: (role || "user").toLowerCase(), isActive: true, updatedAt: Date.now() }, { merge: true });
+      ok++; log("✓ " + email + " → " + clinicId);
+    } catch (e) { log("✗ " + email + ": " + (e.code || e.message) + " (هل أنت مدير المنصة؟)"); }
+  }
+  log("\nتم: " + ok + " من " + lines.length);
+};
+</script>
+</body>
+</html>
