@@ -564,7 +564,7 @@ async function openEdit(site) {
   setVal("edBookingInstructions", data.bookingInstructions);
   setVal("edPaymentLink", data.paymentLink);
   setVal("edPaymentLinkLabel", data.paymentLinkLabel);
-  $("edPaymentCash").checked = data.paymentCashEnabled !== false;
+  setVal("edPaymentMode", payModeOf(data));
   showPreview("pvELogo", data.logo || ""); showPreview("pvEProfile", data.profileImage || ""); showPreview("pvECover", data.coverImage || "");
   renderEditorHours(data.workingHours);
   $("edViewSite").href = siteUrl(site.slug);
@@ -644,6 +644,14 @@ async function syncEditorHours(site, workingHours) {
 }
 
 
+// v40: payment mode is set by the platform admin only: "cash" | "both" | "link".
+// Older sites without paymentMode fall back to the v39 fields (paymentCashEnabled + paymentLink).
+function payModeOf(s) {
+  const m = s && s.paymentMode;
+  if (m === "cash" || m === "both" || m === "link") return m;
+  return s && String(s.paymentLink || "").trim() ? (s.paymentCashEnabled === false ? "link" : "both") : "cash";
+}
+const PAY_MODE_TEXT = { cash: "نقدًا في العيادة فقط", both: "رابط الدفع أو نقدًا في العيادة", link: "رابط الدفع فقط" };
 // v39: payment link must be a full https URL (InstaPay, Paymob, …)
 function cleanPayLink(v) {
   const t = String(v || "").trim();
@@ -662,7 +670,8 @@ $("edSave").addEventListener("click", async () => {
   if (!newClinicId) return say(msg, "معرّف العيادة مطلوب.", "err");
   const payLink = cleanPayLink(val("edPaymentLink"));
   if (payLink === null) return say(msg, "رابط الدفع غير صحيح — يجب أن يبدأ بـ https://", "err");
-  if (!payLink && !$("edPaymentCash").checked) return say(msg, "اختر طريقة دفع واحدة على الأقل: رابط دفع أو الدفع نقدًا.", "err");
+  const payMode = ["cash", "both", "link"].includes(val("edPaymentMode")) ? val("edPaymentMode") : "cash";
+  if (payMode !== "cash" && !payLink) return say(msg, "طريقة الدفع المختارة تحتاج رابط دفع. أضف الرابط أو اختر «نقدًا في العيادة فقط».", "err");
   if (newSlug !== oldSlug && sites.some((site) => site.slug === newSlug)) return say(msg, "هذا الرابط مستخدم بالفعل.", "err");
   const workingHours = collectEditorHours();
   const hoursChanged = JSON.stringify(workingHours) !== JSON.stringify(editing.settings.workingHours || {});
@@ -676,7 +685,7 @@ $("edSave").addEventListener("click", async () => {
     workingHours, ...(hoursChanged ? { hoursSource: "website", hoursUpdatedAt: Date.now() } : {}),
     slug: newSlug, isWebsiteEnabled: val("edEnabled") === "1", onlineBookingEnabled: $("edOnlineBooking").checked,
     bookingInstructions: val("edBookingInstructions").slice(0, 300),
-    paymentLink: payLink, paymentLinkLabel: val("edPaymentLinkLabel").slice(0, 40), paymentCashEnabled: $("edPaymentCash").checked,
+    paymentLink: payLink, paymentLinkLabel: val("edPaymentLinkLabel").slice(0, 40), paymentMode: payMode, paymentCashEnabled: payMode !== "link",
     bookingDoctorName: selectedDoctorName("edDoctorId"), updatedAt: Date.now()
   };
   say(msg, "جارٍ حفظ الموقع بالكامل…");

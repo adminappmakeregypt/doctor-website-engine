@@ -42,9 +42,12 @@ function payOptions() {
   const s = ctx.settings || {};
   const link = safePayUrl(s.paymentLink);
   const label = String(s.paymentLinkLabel || "").trim().slice(0, 40) || "رابط الدفع";
+  let mode = s.paymentMode;
+  if (mode !== "cash" && mode !== "both" && mode !== "link") mode = link ? (s.paymentCashEnabled === false ? "link" : "both") : "cash";
   const opts = [];
-  if (link) opts.push({ id: "online", title: "الدفع أونلاين (" + label + ")", label, link });
-  if (s.paymentCashEnabled !== false || !link) opts.push({ id: "cash", title: "الدفع نقدًا في العيادة", label: "نقدًا في العيادة" });
+  if (mode !== "cash" && link) opts.push({ id: "online", title: "الدفع أونلاين (" + label + ")", label, link });
+  // a "link" mode with a missing/invalid link falls back to cash so booking never breaks
+  if (mode !== "link" || !link) opts.push({ id: "cash", title: "الدفع نقدًا في العيادة", label: "نقدًا في العيادة" });
   return opts;
 }
 

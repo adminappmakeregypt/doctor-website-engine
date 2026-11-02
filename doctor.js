@@ -197,7 +197,7 @@ function fillForm(s) {
   setVal("fBookingInstructions", s.bookingInstructions);
   setVal("fPaymentLink", s.paymentLink);
   setVal("fPaymentLinkLabel", s.paymentLinkLabel);
-  $("fPaymentCash").checked = s.paymentCashEnabled !== false;
+  $("fPaymentModeText").textContent = PAY_MODE_TEXT[payModeOf(s)];
 
   ["Profile", "Cover", "Logo"].forEach(preview);
   renderHours(s.workingHours);
@@ -276,6 +276,14 @@ function collectHours() {
 }
 
 
+// v40: payment mode is set by the platform admin only: "cash" | "both" | "link".
+// Older sites without paymentMode fall back to the v39 fields (paymentCashEnabled + paymentLink).
+function payModeOf(s) {
+  const m = s && s.paymentMode;
+  if (m === "cash" || m === "both" || m === "link") return m;
+  return s && String(s.paymentLink || "").trim() ? (s.paymentCashEnabled === false ? "link" : "both") : "cash";
+}
+const PAY_MODE_TEXT = { cash: "نقدًا في العيادة فقط", both: "رابط الدفع أو نقدًا في العيادة", link: "رابط الدفع فقط" };
 // v39: payment link must be a full https URL (InstaPay, Paymob, …)
 function cleanPayLink(v) {
   const t = String(v || "").trim();
@@ -288,7 +296,7 @@ $("saveBtn").addEventListener("click", async () => {
   if (!clinicId) return;
   const payLink = cleanPayLink(val("fPaymentLink"));
   if (payLink === null) return say($("saveMsg"), "رابط الدفع غير صحيح — يجب أن يبدأ بـ https://", "err");
-  if (!payLink && !$("fPaymentCash").checked) return say($("saveMsg"), "اختر طريقة دفع واحدة على الأقل: رابط دفع أو الدفع نقدًا.", "err");
+  if (payModeOf(settings) !== "cash" && !payLink) return say($("saveMsg"), "المدير فعّل الدفع برابط لموقعك — رابط الدفع مطلوب.", "err");
   say($("saveMsg"), "جارٍ الحفظ…");
   const patch = {
     doctorName: val("fDoctorName"),
@@ -332,7 +340,6 @@ $("saveBtn").addEventListener("click", async () => {
     bookingInstructions: val("fBookingInstructions").slice(0, 300),
     paymentLink: payLink,
     paymentLinkLabel: val("fPaymentLinkLabel").slice(0, 40),
-    paymentCashEnabled: $("fPaymentCash").checked,
     updatedAt: Date.now()
   };
   try {

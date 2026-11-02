@@ -3,7 +3,7 @@
 // Nothing about the doctor is hard-coded here.
 
 import { db } from "./firebase-config.js";
-import { setupBooking, bookingEnabled } from "./booking.js?v=39";
+import { setupBooking, bookingEnabled } from "./booking.js?v=40";
 let CURRENT_CLINIC = "";
 let CURRENT_OFFERS = [];
 let CURRENT_SITE = { slug: "", doctorId: "" }; // from websiteDirectory (admin-controlled)

@@ -189,7 +189,12 @@
         <input id="edPaymentLink" type="url" maxlength="500" dir="ltr" placeholder="https://ipn.eg/S/username/instapay/..." />
         <label class="f" for="edPaymentLinkLabel">اسم وسيلة الدفع</label>
         <input id="edPaymentLinkLabel" type="text" maxlength="40" placeholder="مثال: InstaPay أو Paymob" />
-        <label class="chk"><input type="checkbox" id="edPaymentCash" /> السماح بالدفع نقدًا في العيادة</label>
+        <label class="f" for="edPaymentMode">طرق الدفع المتاحة للمريض (يتحكم فيها المدير فقط)</label>
+        <select id="edPaymentMode">
+          <option value="cash">نقدًا في العيادة فقط</option>
+          <option value="both">رابط الدفع أو نقدًا في العيادة (يختار المريض)</option>
+          <option value="link">رابط الدفع فقط</option>
+        </select>
     </div>
 
     <div id="edAboutPane" class="tabpane admin-tabpane hidden">
@@ -245,6 +250,6 @@
   </div>
 </div>
 
-<script type="module" src="admin.js?v=37"></script>
+<script type="module" src="admin.js?v=38"></script>
 </body>
 </html>
