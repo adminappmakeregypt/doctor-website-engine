@@ -195,6 +195,9 @@ function fillForm(s) {
   $("fEnabled").checked = s.isWebsiteEnabled !== false;
   $("fOnlineBooking").checked = s.onlineBookingEnabled !== false;
   setVal("fBookingInstructions", s.bookingInstructions);
+  setVal("fPaymentLink", s.paymentLink);
+  setVal("fPaymentLinkLabel", s.paymentLinkLabel);
+  $("fPaymentCash").checked = s.paymentCashEnabled !== false;
 
   ["Profile", "Cover", "Logo"].forEach(preview);
   renderHours(s.workingHours);
@@ -272,9 +275,20 @@ function collectHours() {
   return out;
 }
 
+
+// v39: payment link must be a full https URL (InstaPay, Paymob, …)
+function cleanPayLink(v) {
+  const t = String(v || "").trim();
+  if (!t) return "";
+  try { const u = new URL(t); return u.protocol === "https:" ? u.href.slice(0, 500) : null; } catch (e) { return null; }
+}
+
 /* ================= SAVE SETTINGS ================= */
 $("saveBtn").addEventListener("click", async () => {
   if (!clinicId) return;
+  const payLink = cleanPayLink(val("fPaymentLink"));
+  if (payLink === null) return say($("saveMsg"), "رابط الدفع غير صحيح — يجب أن يبدأ بـ https://", "err");
+  if (!payLink && !$("fPaymentCash").checked) return say($("saveMsg"), "اختر طريقة دفع واحدة على الأقل: رابط دفع أو الدفع نقدًا.", "err");
   say($("saveMsg"), "جارٍ الحفظ…");
   const patch = {
     doctorName: val("fDoctorName"),
@@ -316,6 +330,9 @@ $("saveBtn").addEventListener("click", async () => {
     isWebsiteEnabled: $("fEnabled").checked,
     onlineBookingEnabled: $("fOnlineBooking").checked,
     bookingInstructions: val("fBookingInstructions").slice(0, 300),
+    paymentLink: payLink,
+    paymentLinkLabel: val("fPaymentLinkLabel").slice(0, 40),
+    paymentCashEnabled: $("fPaymentCash").checked,
     updatedAt: Date.now()
   };
   try {

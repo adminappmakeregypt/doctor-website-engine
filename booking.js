@@ -33,6 +33,21 @@ const DAY_NAMES = ["الأحد", "الإثنين", "الثلاثاء", "الأر
 const WH_KEYS = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
 const DAYS_AHEAD = 14;
 
+// v39: payment choice. websiteSettings.paymentLink (https only) + paymentLinkLabel + paymentCashEnabled.
+export function safePayUrl(u) {
+  const v = String(u || "").trim();
+  try { const x = new URL(v); return x.protocol === "https:" ? x.href : ""; } catch (e) { return ""; }
+}
+function payOptions() {
+  const s = ctx.settings || {};
+  const link = safePayUrl(s.paymentLink);
+  const label = String(s.paymentLinkLabel || "").trim().slice(0, 40) || "رابط الدفع";
+  const opts = [];
+  if (link) opts.push({ id: "online", title: "الدفع أونلاين (" + label + ")", label, link });
+  if (s.paymentCashEnabled !== false || !link) opts.push({ id: "cash", title: "الدفع نقدًا في العيادة", label: "نقدًا في العيادة" });
+  return opts;
+}
+
 const MSG = {
   already: "أنت حاجز موعد بالفعل مع هذا الطبيب في هذا اليوم.",
   taken: "عذرًا، هذا الموعد لم يعد متاحًا. يرجى اختيار موعد آخر.",
@@ -41,6 +56,7 @@ const MSG = {
   doctor: "من فضلك اختر الطبيب أولًا.",
   date: "من فضلك اختر تاريخ الموعد.",
   time: "من فضلك اختر وقت الموعد.",
+  pay: "من فضلك اختر طريقة الدفع.",
   noSlots: "لا توجد مواعيد متاحة حاليًا. يرجى التواصل مع العيادة.",
   disabled: "الحجز من الموقع غير متاح حاليًا لهذه العيادة.",
   network: "تعذر الاتصال الآن. تحقق من الإنترنت وحاول مرة أخرى.",
@@ -55,6 +71,7 @@ let ctx = null;      // { db, clinicId, settings, slug, doctorId }
 let modal = null;
 let avail = null;    // { perDay, busy:Set, doctorName }
 let picked = { date: "", time: "" };
+let payPick = "";
 
 export function bookingEnabled(settings, site) {
   return !!settings && settings.isWebsiteEnabled !== false && settings.onlineBookingEnabled !== false &&
@@ -225,6 +242,8 @@ function build() {
     if (dBtn) { picked.date = dBtn.dataset.date; picked.time = ""; renderPicker(); }
     const tBtn = t.closest && t.closest("[data-time]");
     if (tBtn && !tBtn.disabled) { picked.time = tBtn.dataset.time; renderPicker(); }
+    const pBtn = t.closest && t.closest("[data-pay]");
+    if (pBtn) { payPick = pBtn.dataset.pay; renderPay(); }
     if (t.closest && t.closest('[data-bk="submit"]')) submit();
     if (t.closest && t.closest('[data-bk="retry"]')) refresh();
   });
@@ -243,6 +262,7 @@ async function open() {
   if (!modal) build();
   const s = ctx.settings || {};
   picked = { date: "", time: "" };
+  payPick = "";
   document.getElementById("bkForm").classList.remove("hidden");
   document.getElementById("bkDone").classList.add("hidden");
   renderHeader();
@@ -311,9 +331,24 @@ function renderBody() {
     "</div>" +
     '<label class="bk-label" for="bkNotes">سبب الزيارة (اختياري)</label>' +
     '<textarea id="bkNotes" rows="2" maxlength="300" placeholder="مثال: كشف جديد، متابعة…"></textarea>' +
+    '<div id="bkPay"></div>' +
     '<p class="bk-err hidden" id="bkErr"></p>' +
     '<button type="button" class="btn btn-primary bk-submit" data-bk="submit">تأكيد الحجز</button>';
   renderPicker();
+  renderPay();
+}
+
+function renderPay() {
+  const box = document.getElementById("bkPay");
+  if (!box) return;
+  const opts = payOptions();
+  if (opts.length === 1) payPick = opts[0].id;
+  else if (!opts.some((o) => o.id === payPick)) payPick = "";
+  if (opts.length < 2 && opts[0].id === "cash") { box.innerHTML = ""; return; } // cash only: nothing to choose
+  box.innerHTML = '<p class="bk-label">طريقة الدفع</p><div class="bk-pay">' + opts.map((o) =>
+    '<button type="button" class="bk-payopt' + (payPick === o.id ? " on" : "") + '" data-pay="' + o.id + '">' +
+    '<span>' + (o.id === "online" ? "💳" : "💵") + "</span>" + esc(o.title) + "</button>").join("") + "</div>" +
+    (payPick === "online" ? '<p class="bk-muted">بعد تأكيد الحجز سيظهر لك زر الدفع.</p>' : "");
 }
 
 function renderPicker() {
@@ -378,6 +413,7 @@ async function submit() {
   if (!/^\+?\d{8,15}$/.test(phone)) return showErr(MSG.phone);
   if (!picked.date) return showErr(MSG.date);
   if (!picked.time) return showErr(MSG.time);
+  if (!payOptions().some((o) => o.id === payPick)) return showErr(MSG.pay);
 
   const btn = document.querySelector('[data-bk="submit"]');
   const busyBtn = (on) => { if (btn) { btn.disabled = on; btn.textContent = on ? "جارٍ الحجز…" : "تأكيد الحجز"; } };
@@ -414,19 +450,34 @@ async function commit(name, phone, notes) {
         time: p.time || "", doctor: p.doctor || chosenDoctorName() });
     }
   } catch (e) { /* if the check fails, continue; the clinic still sees the booking */ }
-  try {
+  const pay = payOptions().find((o) => o.id === payPick) || { id: "cash", label: "نقدًا في العيادة" };
+  const base = {
+    ref, fullName: name, phone, notes,
+    date: picked.date, time: picked.time,
+    doctor: chosenDoctorName().slice(0, 120), doctorId, slug, clinicId,
+    source: "website", status: "مجدول", imported: false,
+    createdAt: Date.now()
+  };
+  const writeBoth = async (data) => {
     const batch = writeBatch(db);
-    batch.set(doc(db, "clinics", clinicId, "websiteBookings", slotId), {
-      ref, fullName: name, phone, notes,
-      date: picked.date, time: picked.time,
-      doctor: chosenDoctorName().slice(0, 120), doctorId, slug, clinicId,
-      source: "website", status: "مجدول", imported: false,
-      createdAt: Date.now()
-    });
+    batch.set(doc(db, "clinics", clinicId, "websiteBookings", slotId), data);
     batch.set(doc(db, "clinics", clinicId, "bookedSlots", slotId), {
       date: picked.date, time: picked.time, doctorId, createdAt: Date.now()
     });
     await batch.commit();
+  };
+  try {
+    try {
+      await writeBoth(Object.assign({}, base, { paymentMethod: pay.id, paymentLabel: pay.label.slice(0, 40) }));
+    } catch (e1) {
+      // Older Firestore rules may only accept the original fields. If the slot is still free,
+      // retry once with the payment choice written inside notes (the clinic app reads both forms).
+      if (!(e1 && e1.code === "permission-denied")) throw e1;
+      const lock = await getDocFromServer(doc(db, "clinics", clinicId, "bookedSlots", slotId)).catch(() => null);
+      if (lock && lock.exists()) throw e1;
+      const tag = "[الدفع: " + (pay.id === "online" ? "أونلاين — " + pay.label : "نقدًا في العيادة") + "]";
+      await writeBoth(Object.assign({}, base, { notes: (tag + " " + notes).trim().slice(0, 300) }));
+    }
     if (lockId) {
       const lb = writeBatch(db);
       lb.set(doc(db, "clinics", clinicId, "phoneLocks", lockId), {
@@ -435,7 +486,7 @@ async function commit(name, phone, notes) {
       });
       try { await lb.commit(); } catch (e) { console.warn("[booking] phone lock not saved", { op: "phoneLock", code: e && e.code }); }
     }
-    done({ name, ref, date: picked.date, time: picked.time, doctor: chosenDoctorName() });
+    done({ name, ref, date: picked.date, time: picked.time, doctor: chosenDoctorName(), pay });
   } catch (e) {
     const code = (e && e.code) || "";
     // developers see the real reason; the public message never includes patient data
@@ -473,7 +524,12 @@ function done(b, already) {
       "<dt>الوقت</dt><dd>" + esc(b.time) + "</dd>" +
       "<dt>اسم المريض</dt><dd>" + esc(b.name) + "</dd>" +
       (b.ref ? "<dt>رقم الحجز</dt><dd><b dir=\"ltr\">" + esc(b.ref) + "</b></dd>" : "") +
+      (b.pay ? "<dt>طريقة الدفع</dt><dd>" + esc(b.pay.id === "online" ? "أونلاين — " + b.pay.label : b.pay.label) + "</dd>" : "") +
     "</dl>" +
+    (b.pay && b.pay.id === "online" && b.pay.link
+      ? '<a class="btn btn-primary bk-submit bk-paynow" href="' + esc(b.pay.link) + '" target="_blank" rel="noopener noreferrer">💳 ادفع الآن (' + esc(b.pay.label) + ")</a>" +
+        '<p class="bk-muted">اكتب رقم الحجز <b dir="ltr">' + esc(b.ref || "") + "</b> في ملاحظة التحويل إن أمكن.</p>"
+      : "") +
     '<p class="bk-muted">احتفظ برقم الحجز. ستتواصل معك العيادة عند الحاجة.</p>' +
     '<button type="button" class="btn btn-primary bk-submit" data-bk="close">العودة للموقع</button>';
   box.classList.remove("hidden");

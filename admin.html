@@ -184,6 +184,12 @@
       </div>
       <label class="f" for="edBookingInstructions">تعليمات الحجز</label>
       <textarea id="edBookingInstructions" rows="2" maxlength="300" placeholder="مثال: يرجى الحضور قبل الموعد بـ 10 دقائق"></textarea>
+      <h3>💳 الدفع عند الحجز</h3>
+        <label class="f" for="edPaymentLink">رابط الدفع (InstaPay / Paymob / أي رابط https) — يظهر للمريض كخيار عند الحجز</label>
+        <input id="edPaymentLink" type="url" maxlength="500" dir="ltr" placeholder="https://ipn.eg/S/username/instapay/..." />
+        <label class="f" for="edPaymentLinkLabel">اسم وسيلة الدفع</label>
+        <input id="edPaymentLinkLabel" type="text" maxlength="40" placeholder="مثال: InstaPay أو Paymob" />
+        <label class="chk"><input type="checkbox" id="edPaymentCash" /> السماح بالدفع نقدًا في العيادة</label>
     </div>
 
     <div id="edAboutPane" class="tabpane admin-tabpane hidden">
@@ -239,6 +245,6 @@
   </div>
 </div>
 
-<script type="module" src="admin.js?v=36"></script>
+<script type="module" src="admin.js?v=37"></script>
 </body>
 </html>

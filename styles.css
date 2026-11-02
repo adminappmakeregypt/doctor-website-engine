@@ -295,6 +295,11 @@ a { color: inherit; text-decoration: none; }
 .bk-chip:hover, .bk-slot:hover:not(:disabled) { border-color: var(--brand); }
 .bk-chip.on, .bk-slot.on { background: var(--brand); border-color: var(--brand); color: #fff; }
 .bk-chip.on small { color: rgba(255,255,255,.8); }
+.bk-pay { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bk-payopt { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: var(--radius-sm); cursor: pointer; font: inherit; font-weight: 700; transition: background .15s, border-color .15s; }
+.bk-payopt:hover { border-color: var(--brand); }
+.bk-payopt.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.bk-paynow { display: block; text-align: center; text-decoration: none; margin-bottom: 8px; }
 .bk-slot.taken { opacity: .4; text-decoration: line-through; cursor: not-allowed; }
 .bk-submit { width: 100%; margin-top: 16px; }
 .bk-muted { color: var(--muted); font-size: 13.5px; }
@@ -305,7 +310,7 @@ a { color: inherit; text-decoration: none; }
 .bk-summary { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; text-align: right; background: var(--bg); border-radius: var(--radius-sm); padding: 14px 16px; margin: 14px 0 8px; }
 .bk-summary dt { color: var(--muted); font-size: 13px; }
 .bk-summary dd { margin: 0; font-weight: 700; }
-@media (max-width: 560px) { .bk-grid { grid-template-columns: 1fr; } .bk-modal { padding: 26px 16px 18px; } }
+@media (max-width: 560px) { .bk-grid, .bk-pay { grid-template-columns: 1fr; } .bk-modal { padding: 26px 16px 18px; } }
 .bk-select { width: 100%; padding: 11px 12px; border: 1px solid var(--line, #ddd); border-radius: var(--radius-sm); background: #fff; font: inherit; font-size: 15px; }
 
 /* offers (v41) */

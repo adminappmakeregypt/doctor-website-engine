@@ -111,6 +111,12 @@
         <label class="chk"><input type="checkbox" id="fOnlineBooking" /> تفعيل الحجز من الموقع (يصل الحجز مباشرة إلى تطبيق العيادة)</label>
         <label class="f" for="fBookingInstructions">تعليمات الحجز (اختياري — تظهر للمريض في نموذج الحجز)</label>
         <textarea id="fBookingInstructions" rows="2" maxlength="300" placeholder="مثال: يرجى الحضور قبل الموعد بـ 10 دقائق"></textarea>
+        <h3>💳 الدفع عند الحجز</h3>
+        <label class="f" for="fPaymentLink">رابط الدفع (InstaPay / Paymob / أي رابط https) — يظهر للمريض كخيار عند الحجز</label>
+        <input id="fPaymentLink" type="url" maxlength="500" dir="ltr" placeholder="https://ipn.eg/S/username/instapay/..." />
+        <label class="f" for="fPaymentLinkLabel">اسم وسيلة الدفع</label>
+        <input id="fPaymentLinkLabel" type="text" maxlength="40" placeholder="مثال: InstaPay أو Paymob" />
+        <label class="chk"><input type="checkbox" id="fPaymentCash" /> السماح بالدفع نقدًا في العيادة</label>
       </div>
 
       <!-- النبذة -->
@@ -218,6 +224,6 @@
   </div>
 </div>
 
-<script type="module" src="doctor.js?v=30"></script>
+<script type="module" src="doctor.js?v=31"></script>
 </body>
 </html>

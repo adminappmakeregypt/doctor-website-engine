@@ -562,6 +562,9 @@ async function openEdit(site) {
   setVal("edEnabled", data.isWebsiteEnabled !== false ? "1" : "0");
   $("edOnlineBooking").checked = data.onlineBookingEnabled !== false;
   setVal("edBookingInstructions", data.bookingInstructions);
+  setVal("edPaymentLink", data.paymentLink);
+  setVal("edPaymentLinkLabel", data.paymentLinkLabel);
+  $("edPaymentCash").checked = data.paymentCashEnabled !== false;
   showPreview("pvELogo", data.logo || ""); showPreview("pvEProfile", data.profileImage || ""); showPreview("pvECover", data.coverImage || "");
   renderEditorHours(data.workingHours);
   $("edViewSite").href = siteUrl(site.slug);
@@ -640,6 +643,14 @@ async function syncEditorHours(site, workingHours) {
   await setDoc(doctorsRef, { json: JSON.stringify(list), updatedAt: new Date().toISOString(), updatedBy: (currentUser && currentUser.email) || "website-admin" });
 }
 
+
+// v39: payment link must be a full https URL (InstaPay, Paymob, …)
+function cleanPayLink(v) {
+  const t = String(v || "").trim();
+  if (!t) return "";
+  try { const u = new URL(t); return u.protocol === "https:" ? u.href.slice(0, 500) : null; } catch (e) { return null; }
+}
+
 $("edSave").addEventListener("click", async () => {
   if (!editing) return;
   const msg = $("edMsg");
@@ -649,6 +660,9 @@ $("edSave").addEventListener("click", async () => {
   const newClinicId = val("edClinicId");
   if (!newSlug) return say(msg, "الرابط مطلوب.", "err");
   if (!newClinicId) return say(msg, "معرّف العيادة مطلوب.", "err");
+  const payLink = cleanPayLink(val("edPaymentLink"));
+  if (payLink === null) return say(msg, "رابط الدفع غير صحيح — يجب أن يبدأ بـ https://", "err");
+  if (!payLink && !$("edPaymentCash").checked) return say(msg, "اختر طريقة دفع واحدة على الأقل: رابط دفع أو الدفع نقدًا.", "err");
   if (newSlug !== oldSlug && sites.some((site) => site.slug === newSlug)) return say(msg, "هذا الرابط مستخدم بالفعل.", "err");
   const workingHours = collectEditorHours();
   const hoursChanged = JSON.stringify(workingHours) !== JSON.stringify(editing.settings.workingHours || {});
@@ -661,7 +675,9 @@ $("edSave").addEventListener("click", async () => {
     themeSettings: Object.assign({}, editing.settings.themeSettings || {}, { primaryColor: val("edPrimaryColor") }),
     workingHours, ...(hoursChanged ? { hoursSource: "website", hoursUpdatedAt: Date.now() } : {}),
     slug: newSlug, isWebsiteEnabled: val("edEnabled") === "1", onlineBookingEnabled: $("edOnlineBooking").checked,
-    bookingInstructions: val("edBookingInstructions").slice(0, 300), bookingDoctorName: selectedDoctorName("edDoctorId"), updatedAt: Date.now()
+    bookingInstructions: val("edBookingInstructions").slice(0, 300),
+    paymentLink: payLink, paymentLinkLabel: val("edPaymentLinkLabel").slice(0, 40), paymentCashEnabled: $("edPaymentCash").checked,
+    bookingDoctorName: selectedDoctorName("edDoctorId"), updatedAt: Date.now()
   };
   say(msg, "جارٍ حفظ الموقع بالكامل…");
   try {
